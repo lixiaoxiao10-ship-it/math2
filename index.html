@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极客特工局终端 V5.0</title>
+    <style>
+        :root {
+            --bg-color: #0f0c29;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --primary: #a78bfa;
+            --success: #4ade80;
+            --danger: #ff6b6b;
+            --warning: #feca57;
+            --text-main: #f0f0ff;
+        }
+        body {
+            margin: 0; padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--bg-color) 0%, #302b63 50%, #24243e 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .header { text-align: center; padding: 20px 0; border-bottom: 1px solid rgba(167,139,250,0.3); margin-bottom: 20px; }
+        .title { font-size: 2.2rem; font-weight: 900; background: linear-gradient(135deg, #FFD700, #ff6b6b, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; }
+        .subtitle { color: #8b8bc0; font-size: 0.9rem; margin-top: 10px; }
+        
+        /* Tabs */
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab-btn { flex: 1; padding: 12px; background: var(--card-bg); border: 1px solid var(--primary); border-radius: 8px; color: var(--text-main); font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .tab-btn.active { background: var(--primary); color: #fff; box-shadow: 0 0 15px rgba(167,139,250,0.5); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.5s; }
+
+        /* Cards */
+        .card { background: var(--card-bg); border: 1px solid rgba(167,139,250,0.3); border-radius: 12px; padding: 20px; margin-bottom: 15px; }
+        .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
+        .stat-box { text-align: center; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 15px; border: 1px solid rgba(167,139,250,0.2); }
+        .stat-num { font-size: 2rem; font-weight: 900; color: #FFD700; }
+        .stat-label { font-size: 0.8rem; color: #8b8bc0; }
+
+        /* Calculation inputs */
+        .calc-row { display: flex; align-items: center; justify-content: space-between; padding: 15px; border-bottom: 1px dashed rgba(255,255,255,0.1); }
+        .calc-expr { font-size: 1.2rem; font-weight: bold; font-family: monospace; }
+        .calc-input { width: 100px; padding: 10px; font-size: 1.2rem; text-align: center; background: rgba(0,0,0,0.5); border: 2px solid var(--primary); color: #fff; border-radius: 6px; font-family: monospace; outline: none; transition: 0.3s;}
+        .calc-input:focus { box-shadow: 0 0 10px var(--primary); }
+        .calc-input.correct { border-color: var(--success); background: rgba(74,222,128,0.2); box-shadow: 0 0 10px var(--success); color: var(--success);}
+        .calc-input.error { border-color: var(--danger); background: rgba(255,107,107,0.2); box-shadow: 0 0 10px var(--danger); color: var(--danger); animation: shake 0.4s; }
+        .tag { font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; background: rgba(253, 203, 110, 0.2); color: #FDCB6E; margin-right: 10px; }
+
+        /* Buttons */
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.2s; width: 100%; margin-top: 10px;}
+        .btn-primary { background: linear-gradient(45deg, #8e2de2, #4a00e0); color: white; }
+        .btn-primary:hover { box-shadow: 0 0 15px rgba(142, 45, 226, 0.6); transform: scale(1.02); }
+        .btn-success { background: linear-gradient(45deg, #11998e, #38ef7d); color: white; }
+        .btn-danger { background: linear-gradient(45deg, #ff416c, #ff4b2b); color: white; }
+        
+        /* Gauss Section */
+        .gauss-q { font-size: 1.1rem; line-height: 1.6; border-left: 4px solid var(--warning); padding-left: 15px; margin: 20px 0; }
+        .parent-lock { background: rgba(0,0,0,0.3); border: 1px dashed var(--danger); padding: 15px; border-radius: 8px; margin-top: 20px; }
+        .hidden-answer { display: none; background: rgba(74,222,128,0.1); border: 1px solid var(--success); padding: 15px; border-radius: 8px; margin-top: 15px; color: var(--success); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 50% { transform: translateX(8px); } 75% { transform: translateX(-8px); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1 class="title">⚡ 极客特工局 · 离线终端 V5</h1>
+        <div class="subtitle" id="date-display">正在连接加密网络...</div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('calc-tab', this)">🔢 防线一：算力狙击战</button>
+        <button class="tab-btn" onclick="switchTab('gauss-tab', this)">🌌 防线二：高斯盲盒</button>
+    </div>
+
+    <!-- 算力狙击战 -->
+    <div id="calc-tab" class="tab-content active card">
+        <h3 style="margin-top:0;">🛡️ 系统底层漏洞排查</h3>
+        <p style="color: #8b8bc0; font-size: 0.9rem;">特工，发现 5 处底层代码 Bug，请估算并输入正确参数。一遍全对即可解锁系统！</p>
+        <button class="btn btn-primary" onclick="generateCalcQuestions()" style="margin-bottom: 20px;">🔄 扫描并生成今日 Bug 代码</button>
+        
+        <div id="calc-container"></div>
+        
+        <button class="btn btn-success" id="submit-calc-btn" style="display:none;" onclick="checkCalcAnswers()">🚀 提交代码，破解防火墙</button>
+        <div id="calc-msg" style="text-align: center; margin-top: 15px; font-weight: bold;"></div>
+    </div>
+
+    <!-- 高斯盲盒 -->
+    <div id="gauss-tab" class="tab-content card">
+        <h3 style="margin-top:0;">📦 空间站机密架构图</h3>
+        
+        <div class="stat-grid">
+            <div class="stat-box"><div class="stat-num" id="stat-done">0</div><div class="stat-label">✅ 已攻破 Boss</div></div>
+            <div class="stat-box"><div class="stat-num" id="stat-left">60</div><div class="stat-label">📚 题库剩余</div></div>
+            <div class="stat-box"><div class="stat-num" id="stat-total">60</div><div class="stat-label">📖 全部 Boss</div></div>
+        </div>
+
+        <button class="btn btn-primary" onclick="drawGauss()">🎲 抽取今日机密任务</button>
+        
+        <div id="gauss-mission-container" style="display:none; margin-top: 20px;">
+            <div style="color: var(--primary); font-weight: bold;" id="gauss-title"></div>
+            <div class="gauss-q" id="gauss-q-text"></div>
+            <p style="color: #8b8bc0; font-size: 0.85rem;">💡 提示：请在大白板上画出系统架构图（树状图/线段图/倒推表），完成后呼叫指挥官（家长）。</p>
+            
+            <!-- 家长控制区 -->
+            <div class="parent-lock" id="parent-lock-area">
+                <div style="display: flex; gap: 10px;">
+                    <input type="password" id="parent-pwd" class="calc-input" style="width: 60%; font-size: 1rem;" placeholder="输入指挥官密码(月月日日)">
+                    <button class="btn btn-danger" style="width: 40%; margin: 0;" onclick="unlockAnswer()">🔓 解锁答案</button>
+                </div>
+                <div id="pwd-msg" style="color: var(--danger); margin-top: 10px; font-size: 0.85rem;"></div>
+            </div>
+
+            <!-- 隐藏的答案与判定区 -->
+            <div class="hidden-answer" id="gauss-answer-area">
+                <h4>📜 通关秘籍（参考答案）：</h4>
+                <div id="gauss-a-text" style="font-size: 1.1rem; margin-bottom: 20px;"></div>
+                <p style="color: #fff;">指挥官，请根据白板上的架构图判定：</p>
+                <div style="display: flex; gap: 15px;">
+                    <button class="btn btn-success" style="margin:0;" onclick="markGauss(true)">✅ 逻辑完美，击杀 Boss</button>
+                    <button class="btn btn-warning" style="margin:0; background: #feca57; color: #333;" onclick="markGauss(false)">❌ 逻辑断裂，Boss 逃跑重置</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// 动态密码生成 (月月日日)
+// ══════════════════════════════════════════════════════════════
+const d = new Date();
+const mm = String(d.getMonth() + 1).padStart(2, '0');
+const dd = String(d.getDate()).padStart(2, '0');
+const TODAY_CODE = mm + dd;
+document.getElementById('date-display').innerHTML = `📅 今日指挥官密码：<b style="color:#FFD700">${TODAY_CODE}</b>`;
+
+// ══════════════════════════════════════════════════════════════
+// 题库数据 (完全移植)
+// ══════════════════════════════════════════════════════════════
+const GAUSS_BANK = {
+    "第一讲 和差倍隐藏条件":[
+        {q: "有两根蜡烛，粗蜡烛比细蜡烛长15厘米。1小时后细缩了20厘米，粗只缩了15厘米。此时粗是细的3倍。粗蜡烛还剩多长？", a: "30厘米"},
+        {q: "红蓝两盒球，红比蓝多5个。红盒取出12个，蓝盒放入19个，蓝就是红的3倍。最后各有多少个？", a: "红13个，蓝39个"},
+        {q: "甲拿16张给乙，两人相等；如果乙拿11张给甲，甲是乙的3倍多10张。原来各有多少张？", a: "甲65张，乙33张"},
+        {q: "两人织围巾长度已相同。接下来萱萱织120厘米，卡莉娅织45厘米，萱萱长度变成卡莉娅的2倍。现在卡莉娅围巾多长？", a: "75厘米"}
+    ],
+    "第二讲 复杂和差倍":[
+        {q: "甲是乙的2倍，乙比丙丁和的3倍多4个，丙是丁的2倍。四箱共132个。丁箱有几个？", a: "4个"},
+        {q: "小高积分比卡莉娅3倍多3分，卡莉娅比小高3倍少73分。两人一共多少分？", a: "35分"},
+        {q: "小明红玲共73块糖，玲吃3块，红玲一样多；红给明2块，明是红的2倍。小红有多少块糖？", a: "19块"},
+        {q: "红比黄的2倍多3支，黄等于蓝绿和，蓝比绿多2支，总共43支。绿有多少支？", a: "4支"}
+    ],
+    "第三讲 假设分组":[
+        {q: "香蕉苹果梨共42千克，苹果是梨3倍。香蕉10元/kg，苹果5元/kg，梨8元/kg，共260元。各多少千克？", a: "香蕉10，苹果24，梨8"},
+        {q: "鸡兔共46条腿，互换数量后变38条腿。原来各几只？", a: "鸡5只，兔9只"},
+        {q: "分苹果，一二三四组每人分3、4、5、6个。二三组共19人，一组是二组2倍，三四组人数相等。共201个苹果。全班多少人？", a: "46人"},
+        {q: "种树，柳9分，杨18分，桃20分。花228分种15棵，柳是杨的2倍。柳树几棵？", a: "6棵"}
+    ],
+    "第四讲 数字计数":[
+        {q: "木板数字0、3、6，可颠倒（6变9）。拼出多少个不同自然数？", a: "19个"},
+        {q: "卡片2、4、7、8，任取三张排一行。共多少个三位数？其中多少个偶数？", a: "24个三位数，18个偶数"},
+        {q: "所有四位数中，各位数字之和超过32的共有多少个？", a: "35个"},
+        {q: "木板4、5、6，可颠倒。拼出多少个不同的三位数？", a: "12个"}
+    ],
+    "第八讲 盈亏问题":[
+        {q: "每布坐6猪剩2猪；每布坐5猪还有4猪没地坐。共多少猪？", a: "44只"},
+        {q: "每人9颗缺3颗；第1人8颗第2人7颗，余下每人6颗，最后多12颗。几人？", a: "6人"},
+        {q: "每间住4人剩10人没住；每间住6人最后一间不空也不满。最多可能多少人？", a: "38人"},
+        {q: "每猴打2怪，10怪没人打；每猴打4怪，有1猴只打2怪。多少妖怪？", a: "22个"}
+    ],
+    "第十三讲 抽屉原理":[
+        {q: "54张扑克，取多少张保证至少三种花色，且每种至少3张？", a: "33张"},
+        {q: "黑白围棋混装，每次摸4枚，至少摸几次保证有三次摸出颜色情况完全相同？", a: "11次"},
+        {q: "8×8棋盘每个格子至少1粒米，保证至少3个格子米一样多。至多放多少粒？", a: "1055个"},
+        {q: "4种颜色珠子各100个。至少摸出多少个，保证有3种颜色且每种至少10个？", a: "219个"}
+    ],
+    "第十四讲 还原问题":[
+        {q: "甲乙丙各有一些钱，甲最多。甲给乙丙让他俩翻倍；乙给甲丙让他俩翻倍；丙给甲乙让他俩翻倍。最后三人一样多，共81元。原来各多少？", a: "甲55，乙19，丙7"},
+        {q: "甲乙共48块糖。每次甲给乙使其翻倍。4次后甲是乙的2倍。原来各多少？", a: "甲47，乙1"},
+        {q: "每次糖多的人给糖少的人使其翻倍；2010次后甲16块，乙2块。原来各多少？", a: "甲16，乙2"}
+    ],
+    "第十五讲 长度与面积":[
+        {q: "边长10厘米正方形纸，横剪一刀竖剪两刀成6个小长方形。这6个周长总和多少？", a: "100厘米"},
+        {q: "长方形中有一块阴影是正方形（边长在内部）。已知外部线段总长，求大长方形周长？（平移法法则）", a: "利用平移，周长为外部线段总和"}
+    ],
+    "第十九讲 几何剪拼":[
+        {q: "将一个图形分割成三部分，拼成一个正方形。说明思路。", a: "利用网格平移拼接（动手画图）"},
+        {q: "25×49长方形，沿虚线剪三部分拼成35×35正方形。说明思路。", a: "阶梯式阶梯剪裁（动手画图）"}
+    ],
+    "第二十讲 思维游戏":[
+        {q: "天平两边放砝码：1克、2克、3克各一个，能称几种不同重量？", a: "6种"},
+        {q: "10箱金条，1箱假的（每根99克），天平只称一次，怎么找出假的一箱？", a: "第1箱取1根，第2箱取2根...共55根一起称"},
+        {q: "1000枚硬币1枚轻的假币。无砝码天平最少称几次找出假币？", a: "7次（三分法）"}
+    ]
+};
+
+// 把字典扁平化成数组，方便做题库
+let flatGaussPool = [];
+for (let chap in GAUSS_BANK) {
+    GAUSS_BANK[chap].forEach((item, index) => {
+        flatGaussPool.push({ id: `${chap}-${index}`, chap: chap, q: item.q, a: item.a });
+    });
+}
+
+// ══════════════════════════════════════════════════════════════
+// 本地存储逻辑 (LocalStorage)
+// ══════════════════════════════════════════════════════════════
+let appState = {
+    gaussPool: flatGaussPool.map(q => q.id), // 存 ID
+    gaussDone:[], // 存完成的题
+    todayGauss: null
+};
+
+function loadState() {
+    const saved = localStorage.getItem('geekMathStateV5');
+    if (saved) {
+        appState = JSON.parse(saved);
+    } else {
+        // 打乱题库
+        appState.gaussPool = appState.gaussPool.sort(() => Math.random() - 0.5);
+        saveState();
+    }
+    updateStats();
+}
+
+function saveState() {
+    localStorage.setItem('geekMathStateV5', JSON.stringify(appState));
+}
+
+// ══════════════════════════════════════════════════════════════
+// UI 切换与基础功能
+// ══════════════════════════════════════════════════════════════
+function switchTab(tabId, btn) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    btn.classList.add('active');
+}
+
+// ══════════════════════════════════════════════════════════════
+// 防线一：计算题引擎
+// ══════════════════════════════════════════════════════════════
+let currentCalcs =[];
+
+function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+function generateCalcQuestions() {
+    currentCalcs =[];
+    // 1. 乘法进位掉帧
+    let a = randomInt(2, 4) * 10 + 5; // 25, 35, 45
+    let b = randomInt(3, 4) * 2;      // 6, 8
+    currentCalcs.push({expr: `${a} × ${b}`, ans: a * b, tag: "乘法进位掉帧", solved: false});
+
+    // 2. 除法中间漏0
+    let c = randomInt(3, 8);
+    let d = randomInt(1, 8);
+    let dividend = c * 100 + d;
+    if (dividend % c !== 0) dividend = c * 100 + c * d;
+    currentCalcs.push({expr: `${dividend} ÷ ${c}`, ans: dividend / c, tag: "除法中间漏0", solved: false});
+
+    // 3. 优先级陷阱 (先乘除)
+    let e = randomInt(10, 30) * 10;
+    let f = randomInt(1, 5) * 10;
+    let g = randomInt(2, 4);
+    currentCalcs.push({expr: `${e} + ${f} × ${g}`, ans: e + f * g, tag: "运算优先级", solved: false});
+
+    // 4. 括号最高权限
+    let h = randomInt(60, 90);
+    let i = randomInt(20, 50);
+    let j = randomInt(3, 6);
+    currentCalcs.push({expr: `(${h} - ${i}) × ${j}`, ans: (h - i) * j, tag: "括号权限", solved: false});
+
+    // 5. 逆向译码
+    let k = randomInt(15, 30);
+    let l = randomInt(4, 8);
+    currentCalcs.push({expr: `[ ] ÷ ${l} = ${k}，求 [ ]`, ans: k * l, tag: "逆向代数", solved: false});
+
+    renderCalcs();
+}
+
+function renderCalcs() {
+    const container = document.getElementById('calc-container');
+    container.innerHTML = '';
+    document.getElementById('submit-calc-btn').style.display = 'block';
+    document.getElementById('calc-msg').innerText = '';
+
+    currentCalcs.forEach((q, idx) => {
+        container.innerHTML += `
+            <div class="calc-row">
+                <div>
+                    <span class="tag">${q.tag}</span><br>
+                    <span class="calc-expr">${q.expr}</span>
+                </div>
+                <input type="number" id="calc-input-${idx}" class="calc-input" placeholder="输入参数" autocomplete="off">
+            </div>
+        `;
+    });
+}
+
+function checkCalcAnswers() {
+    let allCorrect = true;
+    let errorCount = 0;
+
+    currentCalcs.forEach((q, idx) => {
+        if (q.solved) return; // 已经对了的跳过
+
+        const inputEl = document.getElementById(`calc-input-${idx}`);
+        const userVal = parseInt(inputEl.value);
+
+        // 清除动画 class
+        inputEl.classList.remove('error', 'correct');
+        void inputEl.offsetWidth; // 触发重绘
+
+        if (userVal === q.ans) {
+            inputEl.classList.add('correct');
+            inputEl.disabled = true; // 锁死
+            q.solved = true;
+        } else {
+            inputEl.classList.add('error');
+            inputEl.value = ''; // 清空让他重填，或者保留。保留较好，让他知道自己填了啥。
+            allCorrect = false;
+            errorCount++;
+        }
+    });
+
+    const msgEl = document.getElementById('calc-msg');
+    if (allCorrect) {
+        msgEl.style.color = 'var(--success)';
+        msgEl.innerHTML = '🎉 防火墙已彻底攻破！代码完美运行！';
+        document.getElementById('submit-calc-btn').style.display = 'none';
+    } else {
+        msgEl.style.color = 'var(--danger)';
+        msgEl.innerHTML = `⚠️ 警告：发现 ${errorCount} 处底层 Bug！系统拦截了你的提交！请在草稿纸上排查。`;
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
+// 防线二：高斯盲盒引擎
+// ══════════════════════════════════════════════════════════════
+function updateStats() {
+    document.getElementById('stat-done').innerText = appState.gaussDone.length;
+    document.getElementById('stat-left').innerText = appState.gaussPool.length;
+    document.getElementById('stat-total').innerText = flatGaussPool.length;
+
+    // 恢复今日正在做的题
+    if (appState.todayGauss) {
+        displayGaussQuestion(appState.todayGauss);
+    }
+}
+
+function drawGauss() {
+    if (appState.gaussPool.length === 0) {
+        alert("恭喜！所有机密任务已被你全部破解！");
+        return;
+    }
+    // 取第一道题
+    const nextId = appState.gaussPool[0];
+    appState.todayGauss = nextId;
+    saveState();
+    
+    // 隐藏答案区，清空密码
+    document.getElementById('parent-lock-area').style.display = 'block';
+    document.getElementById('gauss-answer-area').style.display = 'none';
+    document.getElementById('parent-pwd').value = '';
+    document.getElementById('pwd-msg').innerText = '';
+
+    displayGaussQuestion(nextId);
+}
+
+function displayGaussQuestion(id) {
+    const qData = flatGaussPool.find(q => q.id === id);
+    if (!qData) return;
+
+    document.getElementById('gauss-mission-container').style.display = 'block';
+    document.getElementById('gauss-title').innerText = `📂 绝密档案：[${qData.chap}]`;
+    
+    // 科幻化包装文本
+    const story = `长官，系统截获了一段加密情报：\n\n"${qData.q}"\n\n请立即在白板上构建系统架构图进行拦截推演！`;
+    document.getElementById('gauss-q-text').innerText = story;
+    document.getElementById('gauss-a-text').innerText = qData.a;
+}
+
+function unlockAnswer() {
+    const pwd = document.getElementById('parent-pwd').value;
+    if (pwd === TODAY_CODE) {
+        document.getElementById('parent-lock-area').style.display = 'none';
+        document.getElementById('gauss-answer-area').style.display = 'block';
+    } else {
+        document.getElementById('pwd-msg').innerText = '❌ 密码错误！非法访问！';
+    }
+}
+
+function markGauss(isSuccess) {
+    const currentId = appState.todayGauss;
+    
+    // 把这道题从 Pool 里抽出来
+    appState.gaussPool = appState.gaussPool.filter(id => id !== currentId);
+
+    if (isSuccess) {
+        // 放进已完成
+        appState.gaussDone.push(currentId);
+        alert("🎉 架构图完美！Boss 被成功击杀！");
+    } else {
+        // 答错了，塞回题库池的末尾，以后再做
+        appState.gaussPool.push(currentId);
+        alert("🛡️ Boss 逃跑了！不用气馁，它之后还会再出现的。");
+    }
+
+    appState.todayGauss = null;
+    saveState();
+    
+    document.getElementById('gauss-mission-container').style.display = 'none';
+    document.getElementById('parent-pwd').value = '';
+    document.getElementById('gauss-answer-area').style.display = 'none';
+    document.getElementById('parent-lock-area').style.display = 'block';
+    
+    updateStats();
+}
+
+// 启动！
+window.onload = loadState;
+
+</script>
+</body>
+</html>
